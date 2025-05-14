@@ -24,6 +24,7 @@ counting_regions = [
         'name': 'YOLOv8 Polygon Region',
         'polygon': Polygon([(50, 80), (250, 20), (450, 80), (400, 350), (100, 350)]),
         'counts': 0,
+        'seen_ids': set(),  # 初始化 ID 记录
         'dragging': False,
         'region_color': (255, 42, 4),
         'text_color': (255, 255, 255)
@@ -32,6 +33,7 @@ counting_regions = [
         'name': 'YOLOv8 Rectangle Region',
         'polygon': Polygon([(200, 250), (440, 250), (440, 550), (200, 550)]),
         'counts': 0,
+        'seen_ids': set(),  # 初始化 ID 记录
         'dragging': False,
         'region_color': (37, 255, 225),
         'text_color': (0, 0, 0)
@@ -148,8 +150,18 @@ def run(
                               color=colors(cls, True), thickness=track_thickness)
 
                 for region in counting_regions:
-                    if region['polygon'].contains(Point(bbox_center)):
-                        region['counts'] += 1
+                    if region['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
+                        if track_id not in region['seen_ids']:
+                            region['counts'] += 1
+                            region['seen_ids'].add(track_id)
+
+        # 绘制计数区域及计数文本
+        for region in counting_regions:
+            pts = np.array(region['polygon'].exterior.coords[:-1], np.int32).reshape((-1, 1, 2))
+            cv2.polylines(frame, [pts], True, region['region_color'], thickness=region_thickness)
+            text = f"{region['name']}: {region['counts']}"
+            x, y = int(pts[0][0][0]), int(pts[0][0][1]) - 10
+            cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, region['text_color'], 2)
 
         # ====== 显示 / 保存 ======
         if view_img:
