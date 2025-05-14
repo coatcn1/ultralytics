@@ -63,25 +63,62 @@ def mouse_callback(event, x, y, flags, param):
         if current_region is not None and current_region['dragging']:
             current_region['dragging'] = False
 
-def run(weights, source, device='cpu', view_img=False, save_img=False, exist_ok=False, classes=None, line_thickness=2, track_thickness=2, region_thickness=2):
-    vid_frame_count = 0
+def run(
+    weights,
+    source,
+    device='auto',            # ← 默认改成 'auto'，自动判定
+    view_img=False,
+    save_img=False,
+    exist_ok=False,
+    classes=None,
+    line_thickness=2,
+    track_thickness=2,
+    region_thickness=2
+):
+    """
+    weights : 模型 .pt 文件路径
+    source  : 视频路径
+    device  : 'auto' | 'cpu' | '0' / 'cuda' / 'cuda:0'
+              'auto' 会优先使用 GPU（若可用），否则退回 CPU
+    其余参数保持不变
+    """
+    import torch  # 函数内部引用，避免全局依赖
 
+    # ---------- ① 解析 device ----------
+    if device == 'auto':
+        device = '0' if torch.cuda.is_available() else 'cpu'
+
+    # ---------- ② 校验输入 ----------
     if not Path(source).exists():
         raise FileNotFoundError(f"Source path '{source}' does not exist.")
 
+    # ---------- ③ 加载模型并放到指定设备 ----------
     model = YOLO(weights)
-    model.to('cuda') if device == '0' else model.to('cpu')
+    if device in ('0', 'cuda', 'cuda:0'):
+        model.to('cuda:0')
+        print('[INFO] 推理设备: GPU (cuda:0)')
+    else:
+        model.to('cpu')
+        print('[INFO] 推理设备: CPU')
 
     names = model.model.names
 
+    # ---------- ④ 打开视频 ----------
     videocapture = cv2.VideoCapture(source)
     frame_width, frame_height = int(videocapture.get(3)), int(videocapture.get(4))
-    fps, fourcc = int(videocapture.get(5)), cv2.VideoWriter_fourcc(*'mp4v')
+    fps        = int(videocapture.get(5))
+    fourcc     = cv2.VideoWriter_fourcc(*'mp4v')
 
     save_dir = increment_path(Path('ultralytics_rc_output') / 'exp', exist_ok)
     save_dir.mkdir(parents=True, exist_ok=True)
-    video_writer = cv2.VideoWriter(str(save_dir / f'{Path(source).stem}.mp4'), fourcc, fps, (frame_width, frame_height))
+    video_writer = cv2.VideoWriter(
+        str(save_dir / f'{Path(source).stem}.mp4'),
+        fourcc, fps,
+        (frame_width, frame_height)
+    )
 
+    # ---------- ⑤ 主循环 ----------
+    vid_frame_count = 0
     while videocapture.isOpened():
         success, frame = videocapture.read()
         if not success:
@@ -90,10 +127,11 @@ def run(weights, source, device='cpu', view_img=False, save_img=False, exist_ok=
 
         results = model.track(frame, persist=True, classes=classes)
 
+        # ====== 原有绘制/计数逻辑保持不变 ======
         if results[0].boxes.id is not None:
-            boxes = results[0].boxes.xyxy.cpu()
+            boxes     = results[0].boxes.xyxy.cpu()
             track_ids = results[0].boxes.id.int().cpu().tolist()
-            clss = results[0].boxes.cls.cpu().tolist()
+            clss      = results[0].boxes.cls.cpu().tolist()
 
             annotator = Annotator(frame, line_width=line_thickness, example=str(names))
 
@@ -106,12 +144,14 @@ def run(weights, source, device='cpu', view_img=False, save_img=False, exist_ok=
                 if len(track) > 30:
                     track.pop(0)
                 points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
-                cv2.polylines(frame, [points], isClosed=False, color=colors(cls, True), thickness=track_thickness)
+                cv2.polylines(frame, [points], isClosed=False,
+                              color=colors(cls, True), thickness=track_thickness)
 
                 for region in counting_regions:
-                    if region['polygon'].contains(Point((bbox_center[0], bbox_center[1]))):
-                        region['counts'] += 1  # 累加计数
+                    if region['polygon'].contains(Point(bbox_center)):
+                        region['counts'] += 1
 
+        # ====== 显示 / 保存 ======
         if view_img:
             if vid_frame_count == 1:
                 cv2.namedWindow('Ultralytics YOLOv8 Region Counter Movable')
@@ -124,11 +164,12 @@ def run(weights, source, device='cpu', view_img=False, save_img=False, exist_ok=
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+    # ---------- ⑥ 资源释放 ----------
     video_writer.release()
     videocapture.release()
     cv2.destroyAllWindows()
 
-    # 打印最终计数结果
+    # ---------- ⑦ 打印计数 ----------
     for region in counting_regions:
         print(f"Region: {region['name']}, Total Counts: {region['counts']}")
 
@@ -151,13 +192,17 @@ def select_model():
 
 def on_run_button_click():
     weights = model_path_var.get()
-    source = video_path_var.get()
+    source  = video_path_var.get()
     if not weights or not source:
         messagebox.showerror('错误', '请先选择模型和视频文件。')
         return
     try:
-        # view_img 和 save_img 参数可根据需要调整
-        run(weights=weights, source=source, view_img=True, save_img=True)
+        # device 不再写死，由 run() 内部自动判定
+        run(weights=weights,
+            source=source,
+            device='auto',        # ← 关键：自动优先 GPU
+            view_img=True,
+            save_img=True)
         messagebox.showinfo('完成', '视频处理完成，输出文件已保存。')
     except Exception as e:
         messagebox.showerror('错误', f'处理视频时发生错误：{e}')
