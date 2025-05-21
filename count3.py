@@ -132,9 +132,9 @@ def run(
                 track.append((float(bbox_center[0]), float(bbox_center[1])))
                 if len(track) > 30:
                     track.pop(0)
-                points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
-                cv2.polylines(frame, [points], isClosed=False,
-                              color=colors(cls, True), thickness=track_thickness)
+                # points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
+                # cv2.polylines(frame, [points], isClosed=False,
+                #               color=colors(cls, True), thickness=track_thickness)
 
                 # 判断中心点是否进入了区域
                 for region in counting_regions:
