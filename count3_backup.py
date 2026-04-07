@@ -56,15 +56,6 @@ heights_win = defaultdict(lambda: deque(maxlen=5))  # 中值窗口
 heights_ema = {}                                    # EMA 平滑
 EMA_ALPHA = 0.25
 
-
-def _draw_counts_top_left(frame, regions, origin=(12, 28), line_gap=28):
-    """在左上角统一绘制各区域计数。"""
-    x0, y0 = origin
-    for i, region in enumerate(regions):
-        text = f"{region['name']}: {region['counts']}"
-        y = y0 + i * line_gap
-        cv2.putText(frame, text, (x0, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
-
 def _smooth_height_by_id(tid: Optional[int], h_raw: Optional[float]) -> Optional[float]:
     if tid is None:
         return h_raw
@@ -353,7 +344,12 @@ def run(
                                 region['counts'] += 1
                                 region['seen_ids'].add(tid)
 
-            _draw_counts_top_left(frame, counting_regions)
+            for region in counting_regions:
+                pts = np.array(region['polygon'].exterior.coords[:-1], np.int32).reshape((-1, 1, 2))
+                cv2.polylines(frame, [pts], True, region['region_color'], thickness=region_thickness)
+                text = f"{region['name']}: {region['counts']}"
+                x, y = int(pts[0][0][0]), int(pts[0][0][1]) - 10
+                cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, region['text_color'], 2)
 
             if save_img:
                 writer.write(frame)
@@ -437,7 +433,12 @@ def run(
                                         (x1, max(0, y1 - 8)),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-            _draw_counts_top_left(frame, counting_regions)
+            for region in counting_regions:
+                pts = np.array(region['polygon'].exterior.coords[:-1], np.int32).reshape((-1, 1, 2))
+                cv2.polylines(frame, [pts], True, region['region_color'], thickness=region_thickness)
+                text = f"{region['name']}: {region['counts']}"
+                x, y = int(pts[0][0][0]), int(pts[0][0][1]) - 10
+                cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, region['text_color'], 2)
 
             if save_img and writer is not None:
                 writer.write(frame)
