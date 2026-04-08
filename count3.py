@@ -61,7 +61,8 @@ def _draw_counts_top_left(frame, regions, origin=(12, 28), line_gap=28):
     """在左上角统一绘制各区域计数。"""
     x0, y0 = origin
     for i, region in enumerate(regions):
-        text = f"{region['name']}: {region['counts']}"
+        display_name = region['name'].replace('YOLOv8 ', '')
+        text = f"{display_name}: {region['counts']}"
         y = y0 + i * line_gap
         cv2.putText(frame, text, (x0, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
 
