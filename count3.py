@@ -33,7 +33,7 @@ except Exception:
 # ---------------- 计数区域（与旧版一致） ----------------
 counting_regions = [
     {
-        'name': 'YOLOv8 Polygon Region',
+        'name': 'Polygon Region',
         'polygon': Polygon([(50, 80), (250, 20), (450, 80), (400, 350), (100, 350)]),
         'counts': 0,
         'seen_ids': set(),
