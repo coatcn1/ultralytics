@@ -378,6 +378,8 @@ def run(
                                 region['counts'] += 1
                                 region['seen_ids'].add(tid)
 
+                frame = ann.result()
+
             _draw_counts_top_left(frame, counting_regions)
 
             if save_img:
@@ -461,6 +463,8 @@ def run(
                             cv2.putText(frame, f"H={h_show*100:.1f}cm",
                                         (x1, max(0, y1 - 8)),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+                frame = ann.result()
 
             _draw_counts_top_left(frame, counting_regions)
 
