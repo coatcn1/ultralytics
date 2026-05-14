@@ -93,11 +93,14 @@ def _resolve_classes(model_names, classes=None, class_names=None):
 
 def _draw_counts_top_left(frame, regions, origin=(12, 28), line_gap=28):
     x0, y0 = origin
+    total = 0
     for i, region in enumerate(regions):
         display_name = region['name'].replace('YOLOv8 ', '')
         text = f"{display_name}: {region['counts']}"
         y = y0 + i * line_gap
         cv2.putText(frame, text, (x0, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+        total += int(region['counts'])
+    cv2.putText(frame, f"Total: {total}", (x0, y0 + len(regions) * line_gap), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
 
 
 def _smooth_height_by_id(tid: Optional[int], h_raw: Optional[float]) -> Optional[float]:
@@ -364,7 +367,7 @@ def run(
                 clss = results[0].boxes.cls.cpu().tolist()
                 ann = Annotator(frame, line_width=line_thickness, example=str(names))
                 for box, tid, cls in zip(boxes, tids, clss):
-                    ann.box_label(box, str(names[cls]), color=colors(cls, True))
+                    ann.box_label(box, 'target', color=colors(0, True))
                     cx = int((box[0] + box[2]) / 2);
                     cy = int((box[1] + box[3]) / 2)
                     tr = track_history[tid]
@@ -427,7 +430,7 @@ def run(
 
                 ann = Annotator(frame, line_width=line_thickness, example=str(names))
                 for box, tid, cls in zip(boxes, tids, clss):
-                    ann.box_label(box, str(names[cls]), color=colors(cls, True))
+                    ann.box_label(box, 'target', color=colors(0, True))
                     x1, y1, x2, y2 = [int(round(v)) for v in box.tolist()]
                     x1, y1 = max(0, x1), max(0, y1)
                     x2, y2 = min(w - 1, x2), min(h - 1, y2)
