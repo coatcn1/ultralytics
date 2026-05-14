@@ -45,6 +45,20 @@ pip install pyrealsense2
   - 高度时序平滑
 - 当前版本会**去掉画面中的区域多边形边框**，并把计数统一显示在左上角。
 
+
+### `count3_target.py`
+- `count3.py` 的目标版本（文件头注释仍写作 `count3.py`，但实际文件名为 `count3_target.py`）。
+- 与 `count3.py` 主体流程基本一致（同样有动态 `custom_tracker.yaml`、`.bag`/普通视频兼容、株高估计和平滑）。
+- 关键差异：左上角统计额外显示 `Total: <总计>`，即把所有区域计数求和后单独展示。
+
+### `count3_261514bak.py`
+- 较早的稳定备份版本（无动态追踪器阈值配置）。
+- 保留普通视频/`.bag` 双通道与株高估计逻辑，但追踪器参数更多依赖 Ultralytics 默认值。
+- 与当前 `count3.py` 的主要差异：
+  - **没有**在启动时写入 `custom_tracker.yaml`（因此不会主动把追踪阈值降到 0.25）。
+  - `_draw_counts_top_left` 不统计 `Total` 行。
+  - 不包含 `_resolve_classes`（类别名称到类别 ID 的解析辅助函数）。
+
 ### `count3_backup.py`
 - `count3.py` 的备份副本（创建时与原 `count3.py` 完全一致）。
 - 便于对比修改前后逻辑，或在实验失败时快速回退。
