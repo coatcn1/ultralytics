@@ -56,6 +56,28 @@ heights_win = defaultdict(lambda: deque(maxlen=5))  # 中值窗口
 heights_ema = {}                                    # EMA 平滑
 EMA_ALPHA = 0.25
 
+def _resolve_classes(model_names, classes=None, class_names=None):
+    """将类别过滤参数统一解析为 YOLO 所需的类别 id 列表。"""
+    if classes and class_names:
+        raise ValueError("--classes 与 --class-names 只能二选一。")
+    if classes:
+        return classes
+    if not class_names:
+        return None
+
+    name_to_id = {str(v).lower(): int(k) for k, v in model_names.items()}
+    resolved = []
+    unknown = []
+    for name in class_names:
+        key = str(name).strip().lower()
+        if key in name_to_id:
+            resolved.append(name_to_id[key])
+        else:
+            unknown.append(name)
+    if unknown:
+        raise ValueError(f"未知类别名: {unknown}。可选类别: {list(model_names.values())}")
+    return resolved
+
 
 def _draw_counts_top_left(frame, regions, origin=(12, 28), line_gap=28):
     """在左上角统一绘制各区域计数。"""
@@ -283,6 +305,7 @@ def run(
     save_img=True,
     exist_ok=False,
     classes=None,
+    class_names=None,
     line_thickness=2,
     track_thickness=2,
     region_thickness=2
@@ -306,6 +329,7 @@ def run(
     else:
         model.to('cpu')
     names = model.model.names
+    classes = _resolve_classes(names, classes=classes, class_names=class_names)
 
     # 输出路径
     save_dir = Path('outputs')
@@ -473,7 +497,8 @@ def parse_opt():
     parser.add_argument('--view-img', action='store_true', help='兼容旧参数，忽略（静默）')
     parser.add_argument('--save-img', action='store_true', default=True, help='保存标注后的视频到 outputs/')
     parser.add_argument('--exist-ok', action='store_true', help='保留参数占位，不影响输出位置')
-    parser.add_argument('--classes', nargs='+', type=int, help='过滤目标类别')
+    parser.add_argument('--classes', nargs='+', type=int, help='按类别 id 过滤目标（如: --classes 0 1）')
+    parser.add_argument('--class-names', nargs='+', type=str, help='按类别名称过滤目标（如: --class-names chill weed）')
     parser.add_argument('--line-thickness', type=int, default=2, help='边框粗细')
     parser.add_argument('--track-thickness', type=int, default=2, help='追踪线粗细')
     parser.add_argument('--region-thickness', type=int, default=4, help='区域线粗细')
